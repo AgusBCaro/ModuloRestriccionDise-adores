@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Extensión de la vista Formulario de Usuarios (res.users) -->
+    <record id="view_users_form_app_restriction" model="ir.ui.view">
+        <field name="name">res.users.form.app.restriction</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Visibilidad de Apps" name="app_visibility_page" groups="base.group_system">
+                    <group string="Control de Visibilidad en Menú Principal (Waffle Menu)">
+                        <p class="text-muted" colspan="2">
+                            Seleccione las aplicaciones que este usuario podrá visualizar en el menú principal (waffle menu / selector de apps).
+                            Si desmarca una casilla, el icono de la aplicación no aparecerá en el menú del usuario.
+                        </p>
+                    </group>
+                    <div class="mb-3">
+                        <button name="action_enable_all_apps" type="object" string="Habilitar Todas" class="btn btn-secondary me-2" icon="fa-check-square-o"/>
+                        <button name="action_disable_all_apps" type="object" string="Deshabilitar Todas" class="btn btn-secondary" icon="fa-square-o"/>
+                    </div>
+                    <group>
+                        <group string="Comunicación y Productividad">
+                            <field name="show_app_discuss"/>
+                            <field name="show_app_calendar"/>
+                            <field name="show_app_contacts"/>
+                            <field name="show_app_dashboard"/>
+                        </group>
+                        <group string="Ventas y Operaciones Comerciales">
+                            <field name="show_app_crm"/>
+                            <field name="show_app_sale"/>
+                            <field name="show_app_pos"/>
+                            <field name="show_app_account"/>
+                        </group>
+                        <group string="Proyectos y Servicios">
+                            <field name="show_app_project"/>
+                            <field name="show_app_timesheet"/>
+                            <field name="show_app_helpdesk"/>
+                            <field name="show_app_designs"/>
+                        </group>
+                        <group string="Inventario y Fabricación">
+                            <field name="show_app_stock"/>
+                            <field name="show_app_repair"/>
+                        </group>
+                        <group string="Recursos Humanos y Marketing">
+                            <field name="show_app_hr"/>
+                            <field name="show_app_website"/>
+                            <field name="show_app_survey"/>
+                            <field name="show_app_link_tracker"/>
+                        </group>
+                        <group string="Sistema y Configuración">
+                            <field name="show_app_apps"/>
+                            <field name="show_app_settings"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
