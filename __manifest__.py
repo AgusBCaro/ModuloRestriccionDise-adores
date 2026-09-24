@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Restricción de Visibilidad de Apps por Usuario',
-    'version': '16.0.1.2.0',
+    'version': '16.0.1.3.0',
     'category': 'Administration',
-    'summary': 'Control granular per-user de la visibilidad de aplicaciones en el menú principal integrado en Derechos de Acceso de Odoo 16.',
+    'summary': 'Control granular per-user de la visibilidad de aplicaciones en el menú principal con actualización instantánea en Odoo 16.',
     'description': """
 Módulo de Restricción de Visibilidad de Aplicaciones para Odoo 16
 ==============================================================
 
-Integra casillas de verificación nativas de Odoo en la pestaña 'Derechos de acceso' 
-bajo la categoría 'VISIBILIDAD DE APLICACIONES' para habilitar o deshabilitar la 
-visibilidad de los módulos en el menú principal (waffle menu / app switcher).
+- Todas las aplicaciones vienen tildadas por defecto para todos los usuarios.
+- El administrador desmarca únicamente las aplicaciones que desea ocultar para cada usuario.
+- Filtrado en tiempo real a través de load_menus (el método que alimenta el waffle menu / selector de apps).
+- Actualización instantánea: invalida la caché de menús de inmediato al guardar en la interfaz sin necesidad de reiniciar el servicio.
 """,
     'author': 'Desarrollo Custom',
     'website': '',

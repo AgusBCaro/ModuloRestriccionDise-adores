@@ -61,9 +61,9 @@ APP_RESTRICTIONS = {
         'names': ['punto de venta', 'point of sale', 'pos']
     },
     'show_app_account': {
-        'xml_ids': ['account.menu_finance'],
+        'xml_ids': ['account.menu_finance', 'account_accountant.menu_accounting'],
         'modules': ['account', 'account_accountant'],
-        'names': ['facturación', 'contabilidad', 'invoicing', 'accounting', 'facturas']
+        'names': ['facturación', 'contabilidad', 'facturacion', 'invoicing', 'accounting', 'facturas']
     },
     'show_app_project': {
         'xml_ids': ['project.menu_main_pm'],
@@ -91,12 +91,12 @@ APP_RESTRICTIONS = {
     'show_app_stock': {
         'xml_ids': ['stock.menu_stock_root'],
         'modules': ['stock'],
-        'names': ['inventario', 'inventory', 'almacén']
+        'names': ['inventario', 'inventory', 'almacén', 'almacen']
     },
     'show_app_repair': {
         'xml_ids': ['repair.menu_repair_order'],
         'modules': ['repair'],
-        'names': ['reparaciones', 'reparación', 'repairs', 'repair']
+        'names': ['reparaciones', 'reparación', 'reparacion', 'repairs', 'repair']
     },
     'show_app_hr': {
         'xml_ids': ['hr.menu_hr_root'],
@@ -119,7 +119,7 @@ APP_RESTRICTIONS = {
     'show_app_settings': {
         'xml_ids': ['base.menu_administration'],
         'modules': ['base'],
-        'names': ['ajustes', 'settings', 'configuración']
+        'names': ['ajustes', 'settings', 'configuración', 'configuracion']
     },
 }
 
@@ -127,78 +127,117 @@ class IrUiMenu(models.Model):
     _inherit = 'ir.ui.menu'
 
     @api.model
-    def _filter_visible_menus(self):
+    def load_menus(self, debug):
         """
-        Filtra el conjunto de menús para ocultar las aplicaciones deshabilitadas
-        según la configuración del usuario actual en res.users.
+        Sobrescribe load_menus (el método oficial que llama el cliente web de Odoo 16).
+        Filtra las aplicaciones del selector de apps (waffle menu) en tiempo real
+        según las restricciones del usuario actual.
         """
-        visible = super(IrUiMenu, self)._filter_visible_menus()
+        res = super(IrUiMenu, self).load_menus(debug)
         
         user = self.env.user
+        if self.env.is_superuser():
+            return res
 
-        # Evitar bloquear al Superusuario / Administrador raíz (ID 1)
-        if self.env.is_superuser() or user.id == 1:
-            return visible
+        if not res or 'root' not in res or not res['root'].get('children'):
+            return res
 
-        hidden_menu_ids = set()
+        # 1. Identificar qué IDs de menús principales están deshabilitados
+        hidden_root_ids = self._get_hidden_app_root_ids(user, res)
 
-        # 1. Chequeo seguro de la tabla Many2many restricted_app_ids en PostgreSQL
-        self.env.cr.execute("""
-            SELECT EXISTS (
-                SELECT 1 FROM information_schema.tables 
-                WHERE table_name = 'res_users_restricted_app_rel'
-            );
-        """)
-        m2m_table_exists = self.env.cr.fetchone()[0]
+        if not hidden_root_ids:
+            return res
 
-        if m2m_table_exists and 'restricted_app_ids' in user._fields:
-            if user.restricted_app_ids:
-                hidden_menu_ids.update(user.restricted_app_ids.ids)
+        # 2. Filtrar las aplicaciones del waffle menu (hijos de root)
+        filtered_root_children = [
+            cid for cid in res['root']['children']
+            if cid not in hidden_root_ids
+        ]
 
-        # 2. Chequeo de columnas booleanas show_app_* existentes en res_users
-        self.env.cr.execute("""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = 'res_users';
-        """)
-        existing_columns = {row[0] for row in self.env.cr.fetchall()}
+        # 3. Identificar recursivamente todos los submenús de las aplicaciones ocultas
+        all_hidden_ids = set()
+        for root_id in hidden_root_ids:
+            all_hidden_ids.update(self._get_menu_subtree_ids(res, root_id))
 
-        menu_data = self.env['ir.model.data'].sudo().search([
-            ('model', '=', 'ir.ui.menu'),
-            ('res_id', 'in', visible.ids)
-        ])
-        xml_id_map = {d.res_id: f"{d.module}.{d.name}" for d in menu_data}
+        # 4. Reconstruir el diccionario de menús excluyendo lo deshabilitado
+        filtered_res = {
+            m_id: m_val for m_id, m_val in res.items()
+            if m_id not in all_hidden_ids
+        }
+        filtered_res['root'] = dict(res['root'])
+        filtered_res['root']['children'] = filtered_root_children
 
-        for field_name, restriction in APP_RESTRICTIONS.items():
-            if field_name not in existing_columns:
+        return filtered_res
+
+    @api.model
+    def _get_hidden_app_root_ids(self, user, res):
+        """Retorna los IDs de las aplicaciones raíz que deben ocultarse."""
+        hidden_ids = set()
+
+        # Chequear restricted_app_ids si existe
+        if hasattr(user, 'restricted_app_ids') and user.restricted_app_ids:
+            hidden_ids.update(user.restricted_app_ids.ids)
+
+        root_children = res['root']['children']
+
+        # Determinar qué campos están explícitamente en False (desmarcados)
+        disabled_fields = []
+        for field_name in APP_RESTRICTIONS.keys():
+            if hasattr(user, field_name):
+                # Por defecto True, solo si está explícitamente en False se oculta
+                val = getattr(user, field_name, True)
+                if val is False:
+                    disabled_fields.append(field_name)
+
+        if not disabled_fields and not hidden_ids:
+            return hidden_ids
+
+        for root_id in root_children:
+            menu_data = res.get(root_id)
+            if not menu_data or not isinstance(menu_data, dict):
                 continue
 
-            val = getattr(user, field_name, None)
-            if val is False:
+            xmlid = (menu_data.get('xmlid') or '').strip()
+            web_icon = (menu_data.get('web_icon') or '').strip()
+            web_icon_module = web_icon.split(',')[0].strip() if web_icon else ''
+            name_lower = (menu_data.get('name') or '').strip().lower()
+
+            for field_name in disabled_fields:
+                restriction = APP_RESTRICTIONS[field_name]
                 target_xml_ids = set(restriction['xml_ids'])
                 target_modules = set(restriction['modules'])
                 target_names = restriction['names']
 
-                for menu in visible:
-                    if menu.parent_id:
-                        continue
+                # 1. Coincidencia por XML ID
+                if xmlid and xmlid in target_xml_ids:
+                    hidden_ids.add(root_id)
+                    break
 
-                    xml_id = xml_id_map.get(menu.id, '')
-                    web_icon_module = (menu.web_icon or '').split(',')[0].strip() if menu.web_icon else ''
-                    menu_name_lower = (menu.name or '').strip().lower()
+                # 2. Coincidencia por módulo del ícono web
+                if web_icon_module and web_icon_module in target_modules:
+                    hidden_ids.add(root_id)
+                    break
 
-                    if xml_id in target_xml_ids:
-                        hidden_menu_ids.add(menu.id)
-                        continue
+                # 3. Coincidencia por nombre visible
+                if any(t in name_lower for t in target_names):
+                    hidden_ids.add(root_id)
+                    break
 
-                    if web_icon_module and web_icon_module in target_modules:
-                        hidden_menu_ids.add(menu.id)
-                        continue
+        return hidden_ids
 
-                    if any(t in menu_name_lower for t in target_names):
-                        hidden_menu_ids.add(menu.id)
-                        continue
-
-        if hidden_menu_ids:
-            visible = visible.filtered(lambda m: m.id not in hidden_menu_ids)
-
-        return visible
+    @api.model
+    def _get_menu_subtree_ids(self, res, parent_id):
+        """Retorna el ID del menú y todos sus descendientes en el árbol res."""
+        subtree = {parent_id}
+        stack = [parent_id]
+        while stack:
+            curr_id = stack.pop()
+            curr_menu = res.get(curr_id)
+            if curr_menu and isinstance(curr_menu, dict):
+                children = curr_menu.get('children', [])
+                for child in children:
+                    c_id = child if isinstance(child, int) else child.get('id') if isinstance(child, dict) else None
+                    if c_id and c_id not in subtree:
+                        subtree.add(c_id)
+                        stack.append(c_id)
+        return subtree

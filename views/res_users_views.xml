@@ -10,10 +10,13 @@
                 <page string="Visibilidad de Apps" name="app_visibility_page" groups="base.group_erp_manager,base.group_system">
                     <group string="Control de Visibilidad en Menú Principal (Waffle Menu)">
                         <p class="text-muted" colspan="2">
-                            Seleccione las aplicaciones que este usuario podrá visualizar en el menú principal.
-                            Si desmarca una casilla, el icono de la aplicación no aparecerá en su menú.
+                            Todas las aplicaciones vienen habilitadas por defecto. Desmarque únicamente aquellas que desea ocultar del menú principal de este usuario.
                         </p>
                     </group>
+                    <div class="mb-3">
+                        <button name="action_enable_all_apps" type="object" string="Habilitar Todas" class="btn btn-secondary me-2" icon="fa-check-square-o"/>
+                        <button name="action_disable_all_apps" type="object" string="Desmarcar Todas" class="btn btn-secondary" icon="fa-square-o"/>
+                    </div>
                     <group>
                         <group string="Comunicación y Productividad">
                             <field name="show_app_discuss"/>
