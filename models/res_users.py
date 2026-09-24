@@ -4,6 +4,17 @@ from odoo import models, fields, api
 class ResUsers(models.Model):
     _inherit = 'res.users'
 
+    # Campo de Selección Dinámica de Menús/Apps Raíz a Ocultar (Soporta CUALQUIER módulo instalado)
+    restricted_app_ids = fields.Many2many(
+        'ir.ui.menu',
+        'res_users_restricted_app_rel',
+        'user_id',
+        'menu_id',
+        string="Aplicaciones Ocultas / Restringidas",
+        domain=[('parent_id', '=', False)],
+        help="Seleccione las aplicaciones (menús principales) que se deben OCULTAR a este usuario."
+    )
+
     # Visibilidad de Módulos / Apps principales en Waffle Menu
     show_app_discuss = fields.Boolean(
         string="Conversaciones",
@@ -110,6 +121,7 @@ class ResUsers(models.Model):
         """Habilita el acceso a todas las aplicaciones para los usuarios seleccionados."""
         for user in self:
             user.write({
+                'restricted_app_ids': [(5, 0, 0)],
                 'show_app_discuss': True,
                 'show_app_calendar': True,
                 'show_app_designs': True,
@@ -134,8 +146,10 @@ class ResUsers(models.Model):
 
     def action_disable_all_apps(self):
         """Deshabilita el acceso a todas las aplicaciones para los usuarios seleccionados."""
+        all_root_menus = self.env['ir.ui.menu'].search([('parent_id', '=', False)])
         for user in self:
             user.write({
+                'restricted_app_ids': [(6, 0, all_root_menus.ids)],
                 'show_app_discuss': False,
                 'show_app_calendar': False,
                 'show_app_designs': False,

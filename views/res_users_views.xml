@@ -7,17 +7,23 @@
         <field name="inherit_id" ref="base.view_users_form"/>
         <field name="arch" type="xml">
             <xpath expr="//notebook" position="inside">
-                <page string="Visibilidad de Apps" name="app_visibility_page" groups="base.group_system">
+                <page string="Visibilidad de Apps" name="app_visibility_page" groups="base.group_erp_manager,base.group_system">
                     <group string="Control de Visibilidad en Menú Principal (Waffle Menu)">
                         <p class="text-muted" colspan="2">
-                            Seleccione las aplicaciones que este usuario podrá visualizar en el menú principal (waffle menu / selector de apps).
-                            Si desmarca una casilla, el icono de la aplicación no aparecerá en el menú del usuario.
+                            Seleccione las aplicaciones que este usuario podrá o no visualizar en el menú principal (waffle menu / selector de apps).
+                            Puede utilizar el selector dinámico (detecta automáticamente todos los módulos instalados) o las casillas rápidas por categoría.
                         </p>
                     </group>
                     <div class="mb-3">
-                        <button name="action_enable_all_apps" type="object" string="Habilitar Todas" class="btn btn-secondary me-2" icon="fa-check-square-o"/>
-                        <button name="action_disable_all_apps" type="object" string="Deshabilitar Todas" class="btn btn-secondary" icon="fa-square-o"/>
+                        <button name="action_enable_all_apps" type="object" string="Habilitar Todas" class="btn btn-success me-2" icon="fa-check-square-o"/>
+                        <button name="action_disable_all_apps" type="object" string="Ocultar Todas" class="btn btn-danger" icon="fa-square-o"/>
                     </div>
+
+                    <group string="Selector Dinámico de Aplicaciones Instaladas (Marque para Ocultar)">
+                        <field name="restricted_app_ids" widget="many2many_checkboxes" domain="[('parent_id', '=', False)]" string="Aplicaciones Ocultas" nolabel="1"/>
+                    </group>
+
+                    <separator string="Casillas Rápidas por Categoría"/>
                     <group>
                         <group string="Comunicación y Productividad">
                             <field name="show_app_discuss"/>

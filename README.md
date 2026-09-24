@@ -1,33 +1,32 @@
 # Módulo de Restricción de Visibilidad de Apps por Usuario (Odoo 16)
 
-Módulo personalizado para **Odoo 16** que permite activar o desactivar la visibilidad de aplicaciones en el menú principal (**waffle menu / selector de aplicaciones**) de forma granular y por usuario, a través de casillas de verificación (checkboxes) simples y visuales.
+Módulo personalizado para **Odoo 16** que permite activar o desactivar la visibilidad de aplicaciones en el menú principal (**waffle menu / selector de aplicaciones**) de forma granular y por usuario, combinando un **selector dinámico multiselect** y casillas rápidas por categoría.
 
 ---
 
 ## 🚀 Características Principales
 
-1. **Control Granular por Usuario:**
-   - Cada usuario posee una pestaña dedicada en su ficha de usuario en Odoo (**Visibilidad de Apps**) donde el administrador puede tildar o destildar exactamente qué aplicaciones puede ver.
-2. **Protección y Seguridad:**
-   - La pestaña de configuración está restringida para que solo los **Administradores del Sistema** (`base.group_system`) puedan modificar los permisos de visibilidad.
-   - El superusuario administrador (ID 1) mantiene el acceso para evitar bloqueos accidentales.
-3. **Botones de Acción Rápida:**
-   - Incluye los botones **"Habilitar Todas"** y **"Deshabilitar Todas"** para configurar permisos en un solo clic.
-4. **Triple Estrategia de Coincidencia (Ultra Robusto):**
-   - Coincidencia por **XML ID** estándar de Odoo.
-   - Coincidencia por **Nombre Técnico del Módulo** (`web_icon`).
-   - Coincidencia por **Nombre Visible del Menú** (admite traducciones y módulos personalizados como *Diseños*).
-5. **Compatibilidad:**
-   - Funciona sin romper los permisos de datos subyacentes (`res.groups`), afectando únicamente la capa visual del menú principal.
+1. **Selector Dinámico de Aplicaciones Instaladas:**
+   - Muestra **todas las aplicaciones instaladas** en su base de datos Odoo (módulos estándar y personalizados como *Diseñador*, *Redes*, *Diseños*, *Mesa de Ayuda*, etc.) mediante casillas de verificación automáticas (`widget="many2many_checkboxes"`).
+2. **Casillas Rápidas Predefinidas:**
+   - Permite controlar rápidamente las principales aplicaciones mediante booleanos categorizados.
+3. **Hook de Inicialización Post-Instalación (`post_init_hook`):**
+   - Asegura que al instalar o actualizar el módulo en una base de datos existente, los usuarios conserven `True` por defecto, **evitando que queden con casillas nulas/desmarcadas o que se oculten aplicaciones accidentalmente**.
+4. **Acceso Ampliado a Administradores:**
+   - Accesible tanto para **Administradores del Sistema** (`base.group_system`) como para **Administradores de Permisos/Derechos de Acceso** (`base.group_erp_manager`).
+   - El superusuario administrador (ID 1) mantiene acceso total garantizado.
+5. **Botones de Acción Rápida:**
+   - **"Habilitar Todas"** y **"Ocultar Todas"** para configurar permisos en un solo clic.
 
 ---
 
 ## 📋 Aplicaciones Soportadas
 
-| Categoría | Aplicaciones Soportadas |
+| Categoría | Cobertura |
 | :--- | :--- |
+| **Módulos Personalizados / Todos** | **Detección Dinámica Automática** de cualquier menú principal de Odoo (*Diseñador*, *Redes*, *Diseños*, etc.) |
 | **Comunicación y Productividad** | Conversaciones, Calendario, Contactos, Tableros |
-| **Ventas y Operaciones Comerciales** | CRM, Ventas, Punto de Venta, Facturación / Contabilidad |
+| **Ventas y Operaciones Comercial** | CRM, Ventas, Punto de Venta, Facturación / Contabilidad |
 | **Proyectos y Servicios** | Proyecto, Partes de Horas, Mesa de Ayuda, Diseños |
 | **Inventario y Fabricación** | Inventario, Reparaciones |
 | **Recursos Humanos y Marketing** | Empleados, Sitio Web, Encuestas, Rastreador de Enlaces |
@@ -39,34 +38,34 @@ Módulo personalizado para **Odoo 16** que permite activar o desactivar la visib
 
 ```text
 ModuloRestriccionDiseñadores/
-├── __init__.py
-├── __manifest__.py
+├── __init__.py          # Importación de modelos y post_init_hook
+├── __manifest__.py      # Manifiesto Odoo 16 con versión y dependencias
 ├── README.md
 ├── models/
 │   ├── __init__.py
-│   ├── ir_ui_menu.py      # Lógica de filtrado de menús en _filter_visible_menus()
-│   └── res_users.py       # Campos Booleanos por usuario y métodos de acción masiva
+│   ├── ir_ui_menu.py    # Lógica de filtrado dinámico en _filter_visible_menus()
+│   └── res_users.py     # Campo Many2many restricted_app_ids y campos booleanos por usuario
 └── views/
-    └── res_users_views.xml # Pestaña "Visibilidad de Apps" en la vista formulario de usuarios
+    └── res_users_views.xml # Pestaña "Visibilidad de Apps" con selector dinámico
 ```
 
 ---
 
-## 🔧 Modo de Instalación
+## 🔧 Modo de Instalación y Actualización
 
 1. **Copiar el módulo** a su carpeta de `addons` personalizada en su servidor Odoo 16.
-2. **Reiniciar el servicio de Odoo** o actualizar la lista de módulos.
-3. Activar el **Modo Desarrollador** en Odoo (`Ajustes -> Activar modo desarrollador`).
+2. **Reiniciar el servicio de Odoo**.
+3. Activar el **Modo Desarrollador** (`Ajustes -> Activar modo desarrollador`).
 4. Ir a **Aplicaciones -> Actualizar Lista de Aplicaciones**.
-5. Buscar `Restricción de Visibilidad de Apps por Usuario` (o `app_menu_restriction`) y hacer clic en **Instalar**.
+5. Buscar `Restricción de Visibilidad de Apps por Usuario` y hacer clic en **Actualizar / Instalar**.
 
 ---
 
 ## 💡 Modo de Uso
 
 1. Ir a **Ajustes -> Usuarios y Compañías -> Usuarios**.
-2. Seleccionar el usuario al cual desea restringir o habilitar aplicaciones.
+2. Seleccionar el usuario al cual desea configurar la visibilidad.
 3. Navegar a la pestaña **Visibilidad de Apps**.
-4. Marcar/desmarcar las casillas según las aplicaciones que el usuario deba visualizar en su menú principal.
+4. En **Selector Dinámico de Aplicaciones Instaladas**, marque la casilla de cualquier aplicación (estándar o personalizada) que desee **ocultar** a ese usuario.
 5. Hacer clic en **Guardar**.
-6. Al iniciar sesión o recargar la página, el usuario solo verá los iconos de las aplicaciones habilitadas en su selector de apps (waffle menu).
+6. Al recargar la página o iniciar sesión con dicho usuario, la aplicación ocultada dejará de aparecer en su selector de apps (waffle menu).

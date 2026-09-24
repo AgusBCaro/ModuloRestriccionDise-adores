@@ -5,7 +5,7 @@ APP_RESTRICTIONS = {
     'show_app_discuss': {
         'xml_ids': ['mail.menu_root_discuss'],
         'modules': ['mail'],
-        'names': ['conversaciones', 'discuss', 'mail']
+        'names': ['conversaciones', 'discuss', 'mail', 'mensajes']
     },
     'show_app_calendar': {
         'xml_ids': ['calendar.mail_menu_calendar'],
@@ -21,7 +21,7 @@ APP_RESTRICTIONS = {
             'modulo_disenos.menu_root'
         ],
         'modules': ['design', 'diseños', 'disenos', 'modulo_disenos', 'web_studio'],
-        'names': ['diseños', 'diseño', 'design', 'designs', 'diseno', 'disenos']
+        'names': ['diseños', 'diseño', 'design', 'designs', 'diseno', 'disenos', 'diseñador', 'diseñadores']
     },
     'show_app_helpdesk': {
         'xml_ids': [
@@ -29,7 +29,7 @@ APP_RESTRICTIONS = {
             'helpdesk_mgmt.menu_helpdesk_root'
         ],
         'modules': ['helpdesk', 'helpdesk_mgmt'],
-        'names': ['mesa de ayuda', 'helpdesk', 'soporte', 'soporte técnico']
+        'names': ['mesa de ayuda', 'helpdesk', 'soporte', 'soporte técnico', 'tickets']
     },
     'show_app_contacts': {
         'xml_ids': ['contacts.menu_contacts'],
@@ -39,7 +39,7 @@ APP_RESTRICTIONS = {
     'show_app_crm': {
         'xml_ids': ['crm.crm_menu_root'],
         'modules': ['crm'],
-        'names': ['crm']
+        'names': ['crm', 'iniciativas', 'flujo de ventas']
     },
     'show_app_sale': {
         'xml_ids': ['sale.sale_menu_root'],
@@ -63,7 +63,7 @@ APP_RESTRICTIONS = {
     'show_app_account': {
         'xml_ids': ['account.menu_finance'],
         'modules': ['account', 'account_accountant'],
-        'names': ['facturación', 'contabilidad', 'invoicing', 'accounting']
+        'names': ['facturación', 'contabilidad', 'invoicing', 'accounting', 'facturas']
     },
     'show_app_project': {
         'xml_ids': ['project.menu_main_pm'],
@@ -76,7 +76,7 @@ APP_RESTRICTIONS = {
             'hr_timesheet.menu_hr_time_tracking_menu_to_approve'
         ],
         'modules': ['hr_timesheet'],
-        'names': ['partes de horas', 'timesheets', 'partes de hora']
+        'names': ['partes de horas', 'timesheets', 'partes de hora', 'tiempo']
     },
     'show_app_website': {
         'xml_ids': ['website.menu_website_configuration'],
@@ -91,7 +91,7 @@ APP_RESTRICTIONS = {
     'show_app_stock': {
         'xml_ids': ['stock.menu_stock_root'],
         'modules': ['stock'],
-        'names': ['inventario', 'inventory']
+        'names': ['inventario', 'inventory', 'almacén']
     },
     'show_app_repair': {
         'xml_ids': ['repair.menu_repair_order'],
@@ -140,18 +140,23 @@ class IrUiMenu(models.Model):
         if self.env.is_superuser() or user.id == 1:
             return visible
 
-        # Obtener mapeo de XML ID de los menús visibles
+        hidden_menu_ids = set()
+
+        # 1. Menús explícitamente ocultos en el selector dinámico Many2many
+        if hasattr(user, 'restricted_app_ids') and user.restricted_app_ids:
+            hidden_menu_ids.update(user.restricted_app_ids.ids)
+
+        # 2. Filtrado por casillas booleanas predefinidas
         menu_data = self.env['ir.model.data'].sudo().search([
             ('model', '=', 'ir.ui.menu'),
             ('res_id', 'in', visible.ids)
         ])
         xml_id_map = {d.res_id: f"{d.module}.{d.name}" for d in menu_data}
 
-        hidden_menu_ids = set()
-
         for field_name, restriction in APP_RESTRICTIONS.items():
-            # Si el usuario tiene la casilla desmarcada (False)
-            if not getattr(user, field_name, True):
+            val = getattr(user, field_name, None)
+            # Solo si el valor es explícitamente False (no None, no True)
+            if val is False:
                 target_xml_ids = set(restriction['xml_ids'])
                 target_modules = set(restriction['modules'])
                 target_names = restriction['names']
@@ -176,7 +181,7 @@ class IrUiMenu(models.Model):
                         continue
 
                     # Coincidencia por nombre visible del menú
-                    if menu_name_lower in target_names:
+                    if any(t in menu_name_lower for t in target_names):
                         hidden_menu_ids.add(menu.id)
                         continue
 
