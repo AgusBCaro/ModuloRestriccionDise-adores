@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data num_records="21">
+    <data>
         <!-- Categoría de Seguridad de Visibilidad de Apps en Derechos de Acceso -->
         <record id="category_app_visibility" model="ir.module.category">
             <field name="name">Visibilidad de Aplicaciones</field>
