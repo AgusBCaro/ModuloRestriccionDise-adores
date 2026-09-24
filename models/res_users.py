@@ -37,6 +37,69 @@ class ResUsers(models.Model):
     show_app_apps = fields.Boolean(string="Aplicaciones", default=True)
     show_app_settings = fields.Boolean(string="Ajustes", default=True)
 
+    def action_enable_all_apps(self):
+        """Habilita todas las aplicaciones para el usuario actual."""
+        visibility_category = self.env['ir.module.category'].sudo().search([('name', '=', 'Visibilidad de Aplicaciones')], limit=1)
+        groups = self.env['res.groups'].sudo().search([('category_id', '=', visibility_category.id)]) if visibility_category else False
+        for user in self:
+            vals = {
+                'restricted_app_ids': [(5, 0, 0)],
+                'show_app_discuss': True,
+                'show_app_calendar': True,
+                'show_app_designs': True,
+                'show_app_helpdesk': True,
+                'show_app_contacts': True,
+                'show_app_crm': True,
+                'show_app_sale': True,
+                'show_app_dashboard': True,
+                'show_app_pos': True,
+                'show_app_account': True,
+                'show_app_project': True,
+                'show_app_timesheet': True,
+                'show_app_website': True,
+                'show_app_survey': True,
+                'show_app_stock': True,
+                'show_app_repair': True,
+                'show_app_hr': True,
+                'show_app_link_tracker': True,
+                'show_app_apps': True,
+                'show_app_settings': True,
+            }
+            if groups:
+                vals['groups_id'] = [(4, g.id) for g in groups]
+            user.write(vals)
+
+    def action_disable_all_apps(self):
+        """Deshabilita todas las aplicaciones para el usuario actual."""
+        visibility_category = self.env['ir.module.category'].sudo().search([('name', '=', 'Visibilidad de Aplicaciones')], limit=1)
+        groups = self.env['res.groups'].sudo().search([('category_id', '=', visibility_category.id)]) if visibility_category else False
+        for user in self:
+            vals = {
+                'show_app_discuss': False,
+                'show_app_calendar': False,
+                'show_app_designs': False,
+                'show_app_helpdesk': False,
+                'show_app_contacts': False,
+                'show_app_crm': False,
+                'show_app_sale': False,
+                'show_app_dashboard': False,
+                'show_app_pos': False,
+                'show_app_account': False,
+                'show_app_project': False,
+                'show_app_timesheet': False,
+                'show_app_website': False,
+                'show_app_survey': False,
+                'show_app_stock': False,
+                'show_app_repair': False,
+                'show_app_hr': False,
+                'show_app_link_tracker': False,
+                'show_app_apps': False,
+                'show_app_settings': False,
+            }
+            if groups:
+                vals['groups_id'] = [(3, g.id) for g in groups]
+            user.write(vals)
+
     @api.model_create_multi
     def create(self, vals_list):
         users = super(ResUsers, self).create(vals_list)
