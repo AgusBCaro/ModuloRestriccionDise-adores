@@ -134,58 +134,74 @@ class IrUiMenu(models.Model):
         """
         visible = super(IrUiMenu, self)._filter_visible_menus()
         
-        user = self.env.user
+        try:
+            user = self.env.user
 
-        # Evitar bloquear al Superusuario / Administrador raíz (ID 1)
-        if self.env.is_superuser() or user.id == 1:
-            return visible
+            # Evitar bloquear al Superusuario / Administrador raíz (ID 1)
+            if self.env.is_superuser() or user.id == 1:
+                return visible
 
-        hidden_menu_ids = set()
+            hidden_menu_ids = set()
 
-        # 1. Menús explícitamente ocultos en el selector dinámico Many2many
-        if hasattr(user, 'restricted_app_ids') and user.restricted_app_ids:
-            hidden_menu_ids.update(user.restricted_app_ids.ids)
+            # 1. Menús explícitamente ocultos en el selector dinámico Many2many
+            if 'restricted_app_ids' in user._fields:
+                try:
+                    if user.restricted_app_ids:
+                        hidden_menu_ids.update(user.restricted_app_ids.ids)
+                except Exception:
+                    # Si la tabla res_users_restricted_app_rel aún no fue creada en DB via -u
+                    pass
 
-        # 2. Filtrado por casillas booleanas predefinidas
-        menu_data = self.env['ir.model.data'].sudo().search([
-            ('model', '=', 'ir.ui.menu'),
-            ('res_id', 'in', visible.ids)
-        ])
-        xml_id_map = {d.res_id: f"{d.module}.{d.name}" for d in menu_data}
+            # 2. Filtrado por casillas booleanas predefinidas
+            menu_data = self.env['ir.model.data'].sudo().search([
+                ('model', '=', 'ir.ui.menu'),
+                ('res_id', 'in', visible.ids)
+            ])
+            xml_id_map = {d.res_id: f"{d.module}.{d.name}" for d in menu_data}
 
-        for field_name, restriction in APP_RESTRICTIONS.items():
-            val = getattr(user, field_name, None)
-            # Solo si el valor es explícitamente False (no None, no True)
-            if val is False:
-                target_xml_ids = set(restriction['xml_ids'])
-                target_modules = set(restriction['modules'])
-                target_names = restriction['names']
+            for field_name, restriction in APP_RESTRICTIONS.items():
+                if field_name not in user._fields:
+                    continue
+                try:
+                    val = getattr(user, field_name, None)
+                except Exception:
+                    val = None
 
-                for menu in visible:
-                    # Aplicar solo a menús raíz (menús principales / app switcher)
-                    if menu.parent_id:
-                        continue
+                # Solo si el valor es explícitamente False (no None, no True)
+                if val is False:
+                    target_xml_ids = set(restriction['xml_ids'])
+                    target_modules = set(restriction['modules'])
+                    target_names = restriction['names']
 
-                    xml_id = xml_id_map.get(menu.id, '')
-                    web_icon_module = (menu.web_icon or '').split(',')[0].strip() if menu.web_icon else ''
-                    menu_name_lower = (menu.name or '').strip().lower()
+                    for menu in visible:
+                        # Aplicar solo a menús raíz (menús principales / app switcher)
+                        if menu.parent_id:
+                            continue
 
-                    # Coincidencia por XML ID exacto
-                    if xml_id in target_xml_ids:
-                        hidden_menu_ids.add(menu.id)
-                        continue
+                        xml_id = xml_id_map.get(menu.id, '')
+                        web_icon_module = (menu.web_icon or '').split(',')[0].strip() if menu.web_icon else ''
+                        menu_name_lower = (menu.name or '').strip().lower()
 
-                    # Coincidencia por nombre de módulo en el icono web (web_icon)
-                    if web_icon_module and web_icon_module in target_modules:
-                        hidden_menu_ids.add(menu.id)
-                        continue
+                        # Coincidencia por XML ID exacto
+                        if xml_id in target_xml_ids:
+                            hidden_menu_ids.add(menu.id)
+                            continue
 
-                    # Coincidencia por nombre visible del menú
-                    if any(t in menu_name_lower for t in target_names):
-                        hidden_menu_ids.add(menu.id)
-                        continue
+                        # Coincidencia por nombre de módulo en el icono web (web_icon)
+                        if web_icon_module and web_icon_module in target_modules:
+                            hidden_menu_ids.add(menu.id)
+                            continue
 
-        if hidden_menu_ids:
-            visible = visible.filtered(lambda m: m.id not in hidden_menu_ids)
+                        # Coincidencia por nombre visible del menú
+                        if any(t in menu_name_lower for t in target_names):
+                            hidden_menu_ids.add(menu.id)
+                            continue
+
+            if hidden_menu_ids:
+                visible = visible.filtered(lambda m: m.id not in hidden_menu_ids)
+
+        except Exception:
+            # Captura de protección total para evitar crash 500 ante desactualización de DB
+            pass
 
         return visible
